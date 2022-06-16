@@ -59,17 +59,13 @@ def getBoundingBox(contours):
         listboxmin.append((minx,miny))
         listboxmax.append((maxx,maxy))
     return listboxmax, listboxmin
-def drawBoundingbox(image,contours):
-    for i in contours:
-        image = cv2.rectangle(image, i[0], i[1], (255,0,0), 1)
-    return image
-def removeBadContours(filename,oriImg,image,listboxmax,listboxmin):
+def removeBadContours(image,listboxmax,listboxmin):
     area = []
     areaHeight = []
     areaWidth = []
     bettetContours = []
     multiChar = []
-    multiChar1 = []
+    listChar = []
     listboxmax,listboxmin = sortBBox(listboxmax,listboxmin)
     for i in range(len(listboxmax)):
         w = listboxmax[i][0] - listboxmin[i][0]
@@ -91,9 +87,7 @@ def removeBadContours(filename,oriImg,image,listboxmax,listboxmin):
     for i in range(len(bettetContours)): 
         w = bettetContours[i][1][0] - bettetContours[i][0][0] 
         h = bettetContours[i][1][1] - bettetContours[i][0][1] 
-        name = filename.split('.')
         if w > h and w >1.3*h and h * w > avgArea :
-            multiChar1.append([bettetContours[i][0],bettetContours[i][1]])
             multiChar = [bettetContours[i][0],bettetContours[i][1]]
             imgcp = image
             imgcp = imgcp[multiChar[0][1]:multiChar[1][1],multiChar[0][0]:multiChar[1][0]]
@@ -115,51 +109,34 @@ def removeBadContours(filename,oriImg,image,listboxmax,listboxmin):
                     if w1*h1 >bigArea:
                         bigArea = w1*h1
                 if 2*bigArea > (w/2)*h:
-                    Img1 = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[0][0]-2:multiChar[1][0]-int(w/2)+2]
-                    cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',Img1)
-                    id+=1
-                    Img2 = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[0][0]+int(w/2)-2:multiChar[1][0]+2]
-                    cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',Img2)
-                    id+=1
+                    listChar.append([(multiChar[0][0]-2,multiChar[0][1]-2),(multiChar[1][0]-int(w/2)+2,multiChar[1][1]+2)])
+                    listChar.append([(multiChar[0][0]+int(w/2)-2,multiChar[0][1]-2),(multiChar[1][0]+2,multiChar[1][1]+2)])
                 else:
-                    Img = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[0][0]-2:multiChar[1][0]+2]
-                    cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',Img)
-                    id+=1
+                    listChar.append([(multiChar[0][0]-2,multiChar[0][1]-2),(multiChar[1][0]+2,multiChar[1][1]+2)])
             elif w < 3.5*avgAreaWidth and w >= 2.5*avgAreaWidth:
-                img1 = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[0][0]-2:multiChar[1][0]-int(w/3)*2+2]
-                img2 = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[0][0]+int(w/3)-2:multiChar[1][0]-int(w/3)+2]
-                img3 = oriImg[multiChar[0][1]-2:multiChar[1][1]+2,multiChar[1][0]-int(w/3)-2:multiChar[1][0]+2]
-                cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',img1)
-                id+=1
-                cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',img2)
-                id+=1
-                cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',img3)
-                id+=1  
+                listChar.append([(multiChar[0][0]-2,multiChar[0][1]-2),(multiChar[1][0]-int(w/3)*2+2,multiChar[1][1]+2)])
+                listChar.append([(multiChar[0][0]+int(w/3)-2,multiChar[0][1]-2),(multiChar[1][0]-int(w/3)+2,multiChar[1][1]+2)])
+                listChar.append([(multiChar[1][0]-int(w/3)-2,multiChar[0][1]-2),(multiChar[1][0]+2,multiChar[1][1]+2)])
         else:
-            Img4= oriImg[bettetContours[i][0][1]:bettetContours[i][1][1],bettetContours[i][0][0]:bettetContours[i][1][0]]
-            cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/AllChar/' +name[0]+name[1]+'_'+str(id)+'.jpg',Img4)  
-            id+=1   
-    return bettetContours
-def splitCharFromSerialNo(path):
-    for filename in os.listdir(path):
-        image = cv2.imread(path + filename)
-        image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
-        SerialNo = image
-        SerialGray = coverGreemColorToWhiteColor(SerialNo)
-        SerialGray = cv2.cvtColor(SerialGray, cv2.COLOR_BGR2GRAY)
-        # Inverse 
-        m, dev = cv2.meanStdDev(SerialGray)
-        ret, thresh = cv2.threshold(SerialGray, m[0][0] - 0.5*dev[0][0], 255, cv2.THRESH_BINARY_INV)
-        # Padding
-        thresh = padding(thresh)
-        # Finding countours
-        contours,hierachy=cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
-        listboxmax,listboxmin = getBoundingBox(contours)
-        bettetContours = removeBadContours(filename,image,thresh,listboxmax,listboxmin)
-        #Draw Bounding box
-        # image = drawBoundingbox(image,bettetContours)
-        # cv2.imwrite('/home/anlab/ANLAB/VisualCode/Contours/OutPut/ResultBoundingBox/'+filename,image)   
-splitCharFromSerialNo('/home/anlab/ANLAB/VisualCode/Contours/TestImage/InputSerialNum/')
+            listChar.append([(bettetContours[i][0][0],bettetContours[i][0][1]),(bettetContours[i][1][0],bettetContours[i][1][1])])
+    return listChar
+def splitCharFromSerialNo(image):
+    image = cv2.cvtColor(image,cv2.COLOR_BGR2RGB)
+    SerialNo = image
+    SerialGray = coverGreemColorToWhiteColor(SerialNo)
+    SerialGray = cv2.cvtColor(SerialGray, cv2.COLOR_BGR2GRAY)
+    # Inverse 
+    m, dev = cv2.meanStdDev(SerialGray)
+    ret, thresh = cv2.threshold(SerialGray, m[0][0] - 0.5*dev[0][0], 255, cv2.THRESH_BINARY_INV)
+    # Padding
+    thresh = padding(thresh)
+    # Finding countours
+    contours,hierachy=cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+    listboxmax,listboxmin = getBoundingBox(contours)
+    listChar = removeBadContours(thresh,listboxmax,listboxmin)
+    return listChar
+img = cv2.imread('/home/anlab/ANLAB/VisualCode/Contours/SplitHandWriting/TestImage/InputSerialNum/MFG No.032212693 LK-21VHU-02.jpg')
+listChar = splitCharFromSerialNo(img)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
